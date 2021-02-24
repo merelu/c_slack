@@ -9,9 +9,9 @@ function SignUp() {
   const [nickname, onChangeNickname, setNickname] = useInput('');
   const [password, , setPassword] = useInput('');
   const [passwordCheck, , setPasswordCheck] = useInput('');
-  const [mismatchError, , setMismatchError] = useInput(false);
-  const [signUpError, , setSignUpError] = useInput('');
-  const [signUpSuccess, , setSignUpSuccess] = useInput(false);
+  const [mismatchError, setMismatchError] = useState(false);
+  const [signUpError, setSignUpError] = useState('');
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
   const onChangePassword = useCallback(
     (e) => {
@@ -32,20 +32,16 @@ function SignUp() {
   const onSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      console.log(email, nickname, password, passwordCheck);
-      if (!mismatchError && nickname) {
-        console.log('서버로 회원가입하기');
+      if (!mismatchError && nickname && email) {
         setSignUpError(''); //비동기 요청전 초기화 해주는게 좋음 - 여러번 요청할시 꼬일수있음
         setSignUpSuccess(false);
         axios
           .post('/api/users', { email, nickname, password })
           .then((response) => {
-            console.log(response);
             setSignUpSuccess(true);
           })
           .catch((error) => {
             setSignUpError(error.response.data);
-            console.log(error.response);
           });
       }
     },
