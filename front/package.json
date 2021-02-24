@@ -11,6 +11,8 @@
   "author": "GGYUHA",
   "license": "MIT",
   "dependencies": {
+    "@emotion/react": "^11.1.5",
+    "@emotion/styled": "^11.1.5",
     "@loadable/component": "^5.14.1",
     "@pmmmwh/react-refresh-webpack-plugin": "pmmmwh/react-refresh-webpack-plugin",
     "@types/react": "^17.0.2",
