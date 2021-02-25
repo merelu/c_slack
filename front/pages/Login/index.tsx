@@ -3,8 +3,11 @@ import { Button, Error, Form, Header, Input, Label, LinkContainer, Success } fro
 import useInput from '@hooks/useInput';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import useSWR from 'swr';
+import fetcher from '@utils/fetcher';
 
 function Login() {
+  const { data, error } = useSWR('http://localhost:3095/api/users', fetcher);
   const [email, onChangeEmail] = useInput('');
   const [password, onChangePassword] = useInput('');
   const [logInError, setLogInError] = useState(false);
@@ -14,7 +17,7 @@ function Login() {
       if (email && password) {
         setLogInError(false);
         axios
-          .post('/api/users/login', { email, password })
+          .post('http://localhost:3095/api/users/login', { email, password }, { withCredentials: true })
           .then((response) => {})
           .catch((error) => {
             setLogInError(error.response?.data?.statusCode === 401);
