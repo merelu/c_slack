@@ -1,13 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Error, Form, Header, Input, Label, LinkContainer, Success } from '@pages/SignUp/styles';
 import useInput from '@hooks/useInput';
-import { Link } from 'react-router-dom';
+import { Link, Redirect } from 'react-router-dom';
 import axios from 'axios';
 import useSWR from 'swr';
 import fetcher from '@utils/fetcher';
 
 function Login() {
-  const { data, error } = useSWR('http://localhost:3095/api/users', fetcher);
+  //revalidate 내가 원할 때 호출하게 하는 것
+  const { data: userData, error, revalidate, mutate } = useSWR('http://localhost:3095/api/users', fetcher, {
+    dedupingInterval: 10000, //2초
+  });
   const [email, onChangeEmail] = useInput('');
   const [password, onChangePassword] = useInput('');
   const [logInError, setLogInError] = useState(false);
@@ -18,7 +21,9 @@ function Login() {
         setLogInError(false);
         axios
           .post('http://localhost:3095/api/users/login', { email, password }, { withCredentials: true })
-          .then((response) => {})
+          .then((response) => {
+            mutate(response.data, false);
+          })
           .catch((error) => {
             setLogInError(error.response?.data?.statusCode === 401);
           });
@@ -26,13 +31,20 @@ function Login() {
     },
     [email, password],
   );
+
+  if (userData === undefined) {
+    return <div>로딩중...</div>;
+  }
+  if (userData) {
+    return <Redirect to="/workspace/channel" />;
+  }
   // console.log(error, userData);
   // if (!error && userData) {
   //   console.log('로그인됨', userData);
   //   return <Redirect to="/workspace/sleact/channel/일반" />;
   // }
   return (
-    <div className="container">
+    <div id="container">
       <Header>C_slack</Header>
       <Form onSubmit={onSubmit}>
         <Label id="email-label">

@@ -2,9 +2,12 @@ import React, { useCallback, useState } from 'react';
 import { Button, Error, Form, Header, Input, Label, LinkContainer, Success } from '@pages/SignUp/styles';
 import useInput from '@hooks/useInput';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, Redirect } from 'react-router-dom';
+import useSWR from 'swr';
+import fetcher from '@utils/fetcher';
 
 function SignUp() {
+  const { data: userData, error, revalidate } = useSWR('http://localhost:3095/api/users', fetcher);
   const [email, onChangeEmail, setEmail] = useInput('');
   const [nickname, onChangeNickname, setNickname] = useInput('');
   const [password, , setPassword] = useInput('');
@@ -36,7 +39,7 @@ function SignUp() {
         setSignUpError(''); //비동기 요청전 초기화 해주는게 좋음 - 여러번 요청할시 꼬일수있음
         setSignUpSuccess(false);
         axios
-          .post('/api/users', { email, nickname, password })
+          .post('http://localhost:3095/api/users', { email, nickname, password })
           .then((response) => {
             setSignUpSuccess(true);
           })
@@ -45,8 +48,15 @@ function SignUp() {
           });
       }
     },
-    [email, nickname, password, passwordCheck, mismatchError],
+    [email, nickname, password, mismatchError],
   );
+  if (userData === undefined) {
+    return <div>화면 꾸미기 로딩중...</div>;
+  }
+  if (userData) {
+    return <Redirect to="/workspace/channel" />;
+  }
+
   return (
     <div className="container">
       <Header>C_slack</Header>
