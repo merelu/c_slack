@@ -8,26 +8,22 @@ import fetcher from '@utils/fetcher';
 
 function Login() {
   //revalidate 내가 원할 때 호출하게 하는 것
-  const { data: userData, error, revalidate, mutate } = useSWR('http://localhost:3095/api/users', fetcher, {
-    dedupingInterval: 10000, //2초
-  });
+  const { data: userData, error, revalidate, mutate } = useSWR('http://localhost:3095/api/users', fetcher);
   const [email, onChangeEmail] = useInput('');
   const [password, onChangePassword] = useInput('');
   const [logInError, setLogInError] = useState(false);
   const onSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      if (email && password) {
-        setLogInError(false);
-        axios
-          .post('http://localhost:3095/api/users/login', { email, password }, { withCredentials: true })
-          .then((response) => {
-            mutate(response.data, false);
-          })
-          .catch((error) => {
-            setLogInError(error.response?.data?.statusCode === 401);
-          });
-      }
+      setLogInError(false);
+      axios
+        .post('http://localhost:3095/api/users/login', { email, password }, { withCredentials: true })
+        .then((response) => {
+          revalidate();
+        })
+        .catch((error) => {
+          setLogInError(error.response?.data?.statusCode === 401);
+        });
     },
     [email, password],
   );
