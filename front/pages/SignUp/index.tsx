@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Button, Error, Form, Header, Input, Label, LinkContainer, Success } from '@pages/SignUp/styles';
+import { Button, Error, Form, Header, Input, Label, LinkContainer, Success } from './styles';
 import useInput from '@hooks/useInput';
 import axios from 'axios';
 import { Link, Redirect } from 'react-router-dom';
@@ -35,7 +35,9 @@ function SignUp() {
   const onSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      if (!mismatchError && nickname && email) {
+      if (!nickname || !nickname.trim()) return;
+      if (!email || !email.trimEnd()) return;
+      if (!mismatchError) {
         setSignUpError(''); //비동기 요청전 초기화 해주는게 좋음 - 여러번 요청할시 꼬일수있음
         setSignUpSuccess(false);
         axios
@@ -91,7 +93,8 @@ function SignUp() {
             />
           </div>
           {mismatchError && <Error>비밀번호가 일치하지 않습니다.</Error>}
-          {!nickname && <Error>닉네임을 입력해주세요.</Error>}
+          {(!email || !email.trim()) && <Error>이메일을 입력해주세요.</Error>}
+          {(!nickname || !nickname.trim()) && <Error>닉네임을 입력해주세요.</Error>}
           {signUpError && <Error>{signUpError}</Error>}
           {signUpSuccess && <Success>회원가입되었습니다! 로그인해주세요.</Success>}
         </Label>
