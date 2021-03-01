@@ -23,7 +23,7 @@ export const CreateMenu = styled.div`
   }
 `;
 
-export const CloseModalButton = styled.button`
+export const CloseMenuButton = styled.button`
   position: absolute;
   right: 10px;
   top: 6px;
