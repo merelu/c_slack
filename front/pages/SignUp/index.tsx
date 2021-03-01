@@ -56,7 +56,7 @@ function SignUp() {
     return <div>화면 꾸미기 로딩중...</div>;
   }
   if (userData) {
-    return <Redirect to="/workspace/channel" />;
+    return <Redirect to="/workspace/cslack/channel/일반" />;
   }
 
   return (

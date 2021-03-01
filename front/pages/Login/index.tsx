@@ -32,7 +32,7 @@ function Login() {
     return <div>로딩중...</div>;
   }
   if (userData) {
-    return <Redirect to="/workspace/channel" />;
+    return <Redirect to="/workspace/cslack/channel/일반" />;
   }
   // console.log(error, userData);
   // if (!error && userData) {
