@@ -8,7 +8,7 @@ import fetcher from '@utils/fetcher';
 
 function Login() {
   //revalidate 내가 원할 때 호출하게 하는 것
-  const { data: userData, error, revalidate, mutate } = useSWR('http://localhost:3095/api/users', fetcher);
+  const { data: userData, error, revalidate, mutate } = useSWR('/api/users', fetcher);
   const [email, onChangeEmail] = useInput('');
   const [password, onChangePassword] = useInput('');
   const [logInError, setLogInError] = useState(false);
@@ -17,7 +17,7 @@ function Login() {
       e.preventDefault();
       setLogInError(false);
       axios
-        .post('http://localhost:3095/api/users/login', { email, password }, { withCredentials: true })
+        .post('/api/users/login', { email, password }, { withCredentials: true })
         .then((response) => {
           revalidate();
         })
@@ -31,14 +31,12 @@ function Login() {
   if (userData === undefined) {
     return <div>로딩중...</div>;
   }
-  if (userData) {
+
+  console.log(error, userData);
+  if (!error && userData) {
+    console.log('로그인됨', userData);
     return <Redirect to="/workspace/cslack/channel/일반" />;
   }
-  // console.log(error, userData);
-  // if (!error && userData) {
-  //   console.log('로그인됨', userData);
-  //   return <Redirect to="/workspace/sleact/channel/일반" />;
-  // }
   return (
     <div id="container">
       <Header>C_slack</Header>
