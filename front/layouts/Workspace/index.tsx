@@ -1,6 +1,6 @@
 import fetcher from '@utils/fetcher';
 import axios from 'axios';
-import React, { FC, ReactNode, useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Redirect, Route, Switch, useParams } from 'react-router';
 import useSWR from 'swr';
 import {
@@ -20,7 +20,6 @@ import {
   WorkspaceWrapper,
 } from './styles';
 import gravatar from 'gravatar';
-import loadable from '@loadable/component';
 import Menu from '@components/Menu';
 import { Link } from 'react-router-dom';
 import { IChannel, IUser, IWorkspace } from '@typings/db';
@@ -28,28 +27,33 @@ import CreateWorkspaceModal from '@components/CreateWorkspaceModal';
 import CreateChannelModal from '@components/CreateChannelModal';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import InviteWorkspaceModal from '@components/InviteWorkspaceModal';
+import InviteChannelModal from '@components/InviteChannelModal';
+import loadable from '@loadable/component';
+import ChannelList from '@components/ChannelList';
+import DMList from '@components/DMList';
 
 const Channel = loadable(() => import('@pages/Channel'));
 const DirectMessage = loadable(() => import('@pages/DirectMessage'));
 
 function Workspace() {
-  const { workspace, channel } = useParams<{ workspace: string; channel: string }>();
-  const { data: userData, error, revalidate, mutate } = useSWR<IUser | false>(
-    'http://localhost:3095/api/users',
+  const { workspace } = useParams<{ workspace: string }>();
+  const { data: userData, error: loginError, revalidate: revalidateUser, mutate } = useSWR<IUser | false>(
+    '/api/users',
     fetcher,
   );
-  const { data: channelData } = useSWR<IChannel[]>(
-    userData ? `http://localhost:3095/api/workspaces/${workspace}/channels` : null,
-    fetcher,
-  );
+  const { data: channelData } = useSWR<IChannel[]>(userData ? `/api/workspaces/${workspace}/channels` : null, fetcher);
+  const { data: memberData } = useSWR<IUser[]>(userData ? `/api/workspaces/${workspace}/members` : null, fetcher);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [showInviteWorkspaceModal, setShowInviteWorkspaceModal] = useState(false);
+  const [showInviteChannelModal, setShowInviteChannelModal] = useState(false);
 
   const onLogout = useCallback(() => {
-    axios.post('http://localhost:3095/api/users/logout', null, { withCredentials: true }).then((response) => {
-      mutate(false, false);
+    axios.post('/api/users/logout', null, { withCredentials: true }).then(() => {
+      revalidateUser();
     });
   }, []);
 
@@ -66,10 +70,18 @@ function Workspace() {
   const onClickCreateChannelModal = useCallback(() => {
     setShowCreateChannelModal(true);
   }, []);
+  const onClickInviteWorkspace = useCallback(() => {
+    setShowInviteWorkspaceModal(true);
+  }, []);
+  const onClickInviteChannel = useCallback(() => {
+    setShowInviteChannelModal(true);
+  }, []);
 
   const onCloseModal = useCallback(() => {
     setShowCreateWorkspaceModal(false);
     setShowCreateChannelModal(false);
+    setShowInviteWorkspaceModal(false);
+    setShowInviteChannelModal(false);
   }, []);
 
   if (!userData) {
@@ -111,22 +123,21 @@ function Workspace() {
           <AddButton onClick={onClickCreateWorkspaceModal}>+</AddButton>
         </Workspaces>
         <Channels>
-          <WorkspaceName onClick={toggleWorkspaceMenu}>C_slack</WorkspaceName>
-          {showWorkspaceMenu && (
-            <MenuScroll>
-              <Menu style={{ top: 95, left: 80 }} show={showWorkspaceMenu} onCloseMenu={toggleWorkspaceMenu}>
-                <WorkspaceModal>
-                  <h2>{userData?.Workspaces.find((v) => v.url === workspace)?.name}</h2>
-                  {/* <button onClick={onClickInviteWorkspace}>워크스페이스에 사용자 초대</button> */}
-                  <button onClick={onClickCreateChannelModal}>채널 만들기</button>
-                  <button onClick={onLogout}>로그아웃</button>
-                </WorkspaceModal>
-              </Menu>
-            </MenuScroll>
-          )}
-          {channelData?.map((c) => (
-            <div>{c.name}</div>
-          ))}
+          <WorkspaceName onClick={toggleWorkspaceMenu}>
+            {userData?.Workspaces.find((v) => v.url === workspace)?.name}
+          </WorkspaceName>
+          <MenuScroll>
+            <Menu style={{ top: 95, left: 80 }} show={showWorkspaceMenu} onCloseMenu={toggleWorkspaceMenu}>
+              <WorkspaceModal>
+                <h2>{userData?.Workspaces.find((v) => v.url === workspace)?.name}</h2>
+                <button onClick={onClickInviteWorkspace}>워크스페이스에 사용자 초대</button>
+                <button onClick={onClickCreateChannelModal}>채널 만들기</button>
+                <button onClick={onLogout}>로그아웃</button>
+              </WorkspaceModal>
+            </Menu>
+            <ChannelList userData={userData} channelData={channelData} />
+            <DMList />
+          </MenuScroll>
         </Channels>
         <Chats>
           <Switch>
@@ -137,6 +148,8 @@ function Workspace() {
       </WorkspaceWrapper>
       <CreateWorkspaceModal show={showCreateWorkspaceModal} onCloseModal={onCloseModal} />
       <CreateChannelModal show={showCreateChannelModal} onCloseModal={onCloseModal} />
+      <InviteWorkspaceModal show={showInviteWorkspaceModal} onCloseModal={onCloseModal} />
+      <InviteChannelModal show={showInviteChannelModal} onCloseModal={onCloseModal} />
       <ToastContainer position="bottom-center" autoClose={2000} />
     </div>
   );
