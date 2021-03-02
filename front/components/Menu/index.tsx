@@ -11,6 +11,9 @@ function Menu({ children, style, show, onCloseMenu, closeButton = true }: IMenuP
   const stopPropagation = useCallback((e) => {
     e.stopPropagation();
   }, []);
+
+  if (!show) return null;
+
   return (
     <CreateMenu onClick={onCloseMenu}>
       <div style={style} onClick={stopPropagation}>
