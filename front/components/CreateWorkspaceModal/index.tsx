@@ -14,7 +14,7 @@ interface ICreateWorkspaceModalProps {
 }
 
 function CreateWorkspaceModal({ show, onCloseModal }: ICreateWorkspaceModalProps) {
-  const { revalidate: revalidateUser } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher);
+  const { revalidate: revalidateUser } = useSWR<IUser | false>('/api/users', fetcher);
   const [newWorkspace, onChangeNewWorkspace, setNewWorkspace] = useInput('');
   const [newUrl, onChangeNewUrl, setNewUrl] = useInput('');
 
@@ -25,7 +25,7 @@ function CreateWorkspaceModal({ show, onCloseModal }: ICreateWorkspaceModalProps
       if (!newUrl || !newUrl.trim()) return;
       axios
         .post(
-          'http://localhost:3095/api/workspaces',
+          '/api/workspaces',
           {
             workspace: newWorkspace,
             url: newUrl,
