@@ -11,9 +11,7 @@ function Modal({ children, show, onCloseModal }: IModalProps) {
     e.stopPropagation();
   }, []);
 
-  if (!show) {
-    return null;
-  }
+  if (!show) return null;
 
   return (
     <CreateModal onClick={onCloseModal}>
