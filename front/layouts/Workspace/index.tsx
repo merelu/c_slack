@@ -94,12 +94,12 @@ function Workspace() {
         {userData && (
           <RightMenu>
             <span onClick={toggleUserProfileMenu}>
-              <ProfileImg src={gravatar.url(userData.nickname, { s: '28px', d: 'retro' })} alt={userData.nickname} />
+              <ProfileImg src={gravatar.url(userData.email, { s: '28px', d: 'retro' })} alt={userData.nickname} />
             </span>
             {showUserMenu && (
               <Menu style={{ right: 0, top: 38 }} show={showUserMenu} onCloseMenu={toggleUserProfileMenu}>
                 <ProfileModal>
-                  <img src={gravatar.url(userData.nickname, { s: '28px', d: 'retro' })} />
+                  <img src={gravatar.url(userData.email, { s: '28px', d: 'retro' })} />
                   <div>
                     <span id="profile-name">{userData.nickname}</span>
                     <span id="profile-active">Active</span>
