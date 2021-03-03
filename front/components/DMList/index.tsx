@@ -55,7 +55,7 @@ function DMList() {
                   data-qa-presence-active="false"
                   data-qa-presence-dnd="false"
                 />
-                <img src={gravatar.url(member.nickname, { s: '20px', d: 'retro' })} alt={member.nickname} />
+                <img src={gravatar.url(member.email, { s: '20px', d: 'retro' })} alt={member.nickname} />
 
                 <span className={count > 0 ? 'bold' : undefined}>{member.nickname}</span>
                 {member.id === userData?.id && <span>(나)</span>}

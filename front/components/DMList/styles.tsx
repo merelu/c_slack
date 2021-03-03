@@ -28,6 +28,6 @@ export const NavLinkWithHover = styled(NavLink)`
   }
   ,
   & img {
-    margin-right: 10px;
+    margin-right: 5px;
   }
 `;
