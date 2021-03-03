@@ -135,7 +135,7 @@ function Workspace() {
                 <button onClick={onLogout}>로그아웃</button>
               </WorkspaceModal>
             </Menu>
-            <ChannelList userData={userData} channelData={channelData} />
+            <ChannelList />
             <DMList />
           </MenuScroll>
         </Channels>

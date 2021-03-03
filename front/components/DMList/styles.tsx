@@ -1,4 +1,5 @@
 import styled from '@emotion/styled';
+import { NavLink } from 'react-router-dom';
 
 export const CollapseButton = styled.button<{ collapse: boolean }>`
   background: transparent;
@@ -19,4 +20,14 @@ export const CollapseButton = styled.button<{ collapse: boolean }>`
       transform: none;
     }
   `};
+`;
+
+export const NavLinkWithHover = styled(NavLink)`
+  &:hover {
+    background: #350d36;
+  }
+  ,
+  & img {
+    margin-right: 10px;
+  }
 `;
