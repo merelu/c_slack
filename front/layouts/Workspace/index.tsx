@@ -22,7 +22,7 @@ import {
 import gravatar from 'gravatar';
 import Menu from '@components/Menu';
 import { Link } from 'react-router-dom';
-import { IChannel, IUser, IWorkspace } from '@typings/db';
+import { IUser, IWorkspace } from '@typings/db';
 import CreateWorkspaceModal from '@components/CreateWorkspaceModal';
 import CreateChannelModal from '@components/CreateChannelModal';
 import { ToastContainer } from 'react-toastify';
@@ -38,12 +38,9 @@ const DirectMessage = loadable(() => import('@pages/DirectMessage'));
 
 function Workspace() {
   const { workspace } = useParams<{ workspace: string }>();
-  const { data: userData, error: loginError, revalidate: revalidateUser, mutate } = useSWR<IUser | false>(
-    '/api/users',
-    fetcher,
-  );
-  const { data: channelData } = useSWR<IChannel[]>(userData ? `/api/workspaces/${workspace}/channels` : null, fetcher);
-  const { data: memberData } = useSWR<IUser[]>(userData ? `/api/workspaces/${workspace}/members` : null, fetcher);
+  const { data: userData, revalidate: revalidateUser } = useSWR<IUser | false>('/api/users', fetcher);
+  // const { data: channelData } = useSWR<IChannel[]>(userData ? `/api/workspaces/${workspace}/channels` : null, fetcher);
+  // const { data: memberData } = useSWR<IUser[]>(userData ? `/api/workspaces/${workspace}/members` : null, fetcher);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
@@ -55,7 +52,7 @@ function Workspace() {
     axios.post('/api/users/logout', null, { withCredentials: true }).then(() => {
       revalidateUser();
     });
-  }, []);
+  }, [revalidateUser]);
 
   const toggleUserProfileMenu = useCallback(() => {
     setShowUserMenu((prev) => !prev);
@@ -73,9 +70,9 @@ function Workspace() {
   const onClickInviteWorkspace = useCallback(() => {
     setShowInviteWorkspaceModal(true);
   }, []);
-  const onClickInviteChannel = useCallback(() => {
-    setShowInviteChannelModal(true);
-  }, []);
+  // const onClickInviteChannel = useCallback(() => {
+  //   setShowInviteChannelModal(true);
+  // }, []);
 
   const onCloseModal = useCallback(() => {
     setShowCreateWorkspaceModal(false);
