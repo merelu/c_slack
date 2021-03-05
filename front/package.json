@@ -41,6 +41,7 @@
     "@babel/preset-env": "^7.12.17",
     "@babel/preset-react": "^7.12.13",
     "@babel/preset-typescript": "^7.12.17",
+    "@types/autosize": "^3.0.7",
     "@types/loadable__component": "^5.13.3",
     "@types/node": "^14.14.31",
     "@types/react-router": "^5.1.11",
