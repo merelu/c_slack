@@ -1,26 +1,44 @@
-import React, { useCallback } from 'react';
-import { Mention } from 'react-mentions';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { ChatArea, Form, MentionsTextarea, SendButton, Toolbox } from './styles';
-
+import autosize from 'autosize';
 interface IChatBoxProps {
   chat?: string;
   onSubmitForm: (e: any) => void;
   onChangeChat: (e: any) => void;
+  placeholder?: string;
 }
-function ChatBox({ chat, onSubmitForm, onChangeChat }: IChatBoxProps) {
-  const onKeyDownChat = useCallback((e) => {
-    console.log(e);
-    if (e.key === 'Enter') {
-      if (!e.shiftKey) {
-        e.preventDefault();
-        onSubmitForm(e);
-      }
+
+function ChatBox({ chat, onSubmitForm, onChangeChat, placeholder }: IChatBoxProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (textareaRef.current) {
+      autosize(textareaRef.current);
     }
   }, []);
+
+  const onKeyDownChat = useCallback(
+    (e) => {
+      if (e.key === 'Enter') {
+        if (!e.shiftKey) {
+          e.preventDefault();
+          onSubmitForm(e);
+        }
+      }
+    },
+    [onSubmitForm],
+  );
+
   return (
     <ChatArea>
       <Form onSubmit={onSubmitForm}>
-        <MentionsTextarea id="editor-chat" value={chat} onKeyDown={onKeyDownChat}></MentionsTextarea>
+        <MentionsTextarea
+          id="editor-chat"
+          value={chat}
+          onKeyDown={onKeyDownChat}
+          placeholder={placeholder}
+          onChange={onChangeChat}
+          ref={textareaRef}
+        ></MentionsTextarea>
         <Toolbox>
           <SendButton
             className={

@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { ChatZone, Section, StickyHeader } from './styles';
-
-function ChatList() {
+interface IChatListProps {
+  children: ReactNode;
+}
+function ChatList({ children }: IChatListProps) {
   return (
     <ChatZone>
       <Section>
         <StickyHeader>stickyheader</StickyHeader>
-        section
+        {children}
       </Section>
     </ChatZone>
   );

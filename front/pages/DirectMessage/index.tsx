@@ -7,17 +7,43 @@ import { useParams } from 'react-router';
 import ChatBox from '@components/ChatBox';
 import ChatList from '@components/ChatList';
 import useInput from '@hooks/useInput';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { IDM } from '@typings/db';
 
 function DirectMessage() {
   const { workspace, id } = useParams<{ workspace: string; id: string }>();
   const { data: myData } = useSWR('/api/users', fetcher);
   const { data: userData } = useSWR(`/api/workspaces/${workspace}/members/${id}`, fetcher);
+  const { data: chatData, revalidate } = useSWR<IDM[]>(
+    userData ? `/api/workspaces/${workspace}/dms/${id}/chats?perPage=10&page=1` : null,
+    fetcher,
+  );
   const [chat, onChangeChat, setChat] = useInput('');
 
-  const onSubmitForm = useCallback((e) => {
-    e.preventDefault();
-    console.log('submit');
-  }, []);
+  const onSubmitForm = useCallback(
+    (e) => {
+      e.preventDefault();
+      axios
+        .post(
+          `/api/workspaces/${workspace}/dms/${id}/chat`,
+          {
+            content: chat,
+          },
+          { withCredentials: true },
+        )
+        .then(() => {
+          revalidate();
+          setChat('');
+        })
+        .catch((error) => {
+          console.dir(error);
+          toast.error(error.response?.data);
+        });
+    },
+    [chat],
+  );
+
   if (!myData || !userData) return null;
   return (
     <Container>
@@ -25,7 +51,11 @@ function DirectMessage() {
         <img src={gravatar.url(userData.email, { s: '24px', d: 'retro' })} alt={userData.nickname} />
         <span>{userData.nickname}</span>
       </Header>
-      <ChatList />
+      <ChatList>
+        {chatData?.map((data) => {
+          return <div>{data.content}</div>;
+        })}
+      </ChatList>
       <ChatBox chat={chat} onChangeChat={onChangeChat} onSubmitForm={onSubmitForm} />
     </Container>
   );
