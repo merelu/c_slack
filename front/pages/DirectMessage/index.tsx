@@ -16,7 +16,7 @@ function DirectMessage() {
   const { data: myData } = useSWR('/api/users', fetcher);
   const { data: userData } = useSWR(`/api/workspaces/${workspace}/members/${id}`, fetcher);
   const { data: chatData, revalidate } = useSWR<IDM[]>(
-    userData ? `/api/workspaces/${workspace}/dms/${id}/chats?perPage=10&page=1` : null,
+    userData ? `/api/workspaces/${workspace}/dms/${id}/chats?perPage=20&page=1` : null,
     fetcher,
   );
   const [chat, onChangeChat, setChat] = useInput('');
@@ -26,7 +26,7 @@ function DirectMessage() {
       e.preventDefault();
       axios
         .post(
-          `/api/workspaces/${workspace}/dms/${id}/chat`,
+          `/api/workspaces/${workspace}/dms/${id}/chats`,
           {
             content: chat,
           },
@@ -41,7 +41,7 @@ function DirectMessage() {
           toast.error(error.response?.data);
         });
     },
-    [chat],
+    [chat, id, revalidate, setChat, workspace],
   );
 
   if (!myData || !userData) return null;
@@ -51,11 +51,7 @@ function DirectMessage() {
         <img src={gravatar.url(userData.email, { s: '24px', d: 'retro' })} alt={userData.nickname} />
         <span>{userData.nickname}</span>
       </Header>
-      <ChatList>
-        {chatData?.map((data) => {
-          return <div>{data.content}</div>;
-        })}
-      </ChatList>
+      <ChatList chatData={chatData} />
       <ChatBox chat={chat} onChangeChat={onChangeChat} onSubmitForm={onSubmitForm} />
     </Container>
   );
