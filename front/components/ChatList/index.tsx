@@ -1,15 +1,20 @@
-import React, { ReactNode } from 'react';
+import Chat from '@components/Chat';
+import { IChat, IDM } from '@typings/db';
+import React from 'react';
 import { ChatZone, Section, StickyHeader } from './styles';
-interface IChatListProps {
-  children: ReactNode;
+import { Scrollbars } from 'react-custom-scrollbars';
+interface IChatList {
+  chatData?: IDM[];
 }
-function ChatList({ children }: IChatListProps) {
+function ChatList({ chatData }: IChatList) {
+  if (chatData) {
+    console.log(chatData);
+  }
   return (
     <ChatZone>
-      <Section>
-        <StickyHeader>stickyheader</StickyHeader>
-        {children}
-      </Section>
+      {chatData?.map((chat) => (
+        <Chat key={chat.id} data={chat} />
+      ))}
     </ChatZone>
   );
 }
