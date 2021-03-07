@@ -1,6 +1,6 @@
 import fetcher from '@utils/fetcher';
 import axios from 'axios';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Redirect, Route, Switch, useParams } from 'react-router';
 import useSWR from 'swr';
 import {
@@ -22,7 +22,7 @@ import {
 import gravatar from 'gravatar';
 import Menu from '@components/Menu';
 import { Link } from 'react-router-dom';
-import { IUser, IWorkspace } from '@typings/db';
+import { IChannel, IUser, IWorkspace } from '@typings/db';
 import CreateWorkspaceModal from '@components/CreateWorkspaceModal';
 import CreateChannelModal from '@components/CreateChannelModal';
 import { ToastContainer } from 'react-toastify';
@@ -32,6 +32,7 @@ import InviteChannelModal from '@components/InviteChannelModal';
 import loadable from '@loadable/component';
 import ChannelList from '@components/ChannelList';
 import DMList from '@components/DMList';
+import useSocket from '@hooks/useSocket';
 
 const Channel = loadable(() => import('@pages/Channel'));
 const DirectMessage = loadable(() => import('@pages/DirectMessage'));
@@ -39,7 +40,7 @@ const DirectMessage = loadable(() => import('@pages/DirectMessage'));
 function Workspace() {
   const { workspace } = useParams<{ workspace: string }>();
   const { data: userData, revalidate: revalidateUser } = useSWR<IUser | false>('/api/users', fetcher);
-  // const { data: channelData } = useSWR<IChannel[]>(userData ? `/api/workspaces/${workspace}/channels` : null, fetcher);
+  const { data: channelData } = useSWR<IChannel[]>(userData ? `/api/workspaces/${workspace}/channels` : null, fetcher);
   // const { data: memberData } = useSWR<IUser[]>(userData ? `/api/workspaces/${workspace}/members` : null, fetcher);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
@@ -47,6 +48,20 @@ function Workspace() {
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [showInviteWorkspaceModal, setShowInviteWorkspaceModal] = useState(false);
   const [showInviteChannelModal, setShowInviteChannelModal] = useState(false);
+
+  //소캣
+  const [socket, disconnect] = useSocket(workspace);
+
+  useEffect(() => {
+    if (channelData && userData && socket) {
+      socket.emit('login', { id: userData.id, channels: channelData.map((v) => v.id) });
+    }
+  }, [channelData, socket, userData]);
+
+  useEffect(() => {
+    disconnect();
+    console.log('disconnect socket');
+  }, [disconnect, workspace]);
 
   const onLogout = useCallback(() => {
     axios.post('/api/users/logout', null, { withCredentials: true }).then(() => {
