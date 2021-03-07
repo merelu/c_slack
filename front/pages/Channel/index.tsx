@@ -41,17 +41,13 @@ function Channel() {
           });
       }
     },
-    [chat],
+    [channel, chat, revalidate, setChat, workspace],
   );
 
   return (
     <Container>
       <Header>Channels</Header>
-      <ChatList>
-        {chatData?.map((data) => {
-          return <div key={data.id}>{data.content}</div>;
-        })}
-      </ChatList>
+      {/* <ChatList chatData={chatData} /> */}
       <ChatBox chat={chat} onChangeChat={onChangeChat} onSubmitForm={onSubmitForm} />
     </Container>
   );
