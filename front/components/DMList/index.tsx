@@ -1,12 +1,11 @@
-import { ProfileImg } from '@layouts/Workspace/styles';
 import { IUser, IUserWithOnline } from '@typings/db';
 import fetcher from '@utils/fetcher';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { NavLink } from 'react-router-dom';
 import useSWR from 'swr';
 import gravatar from 'gravatar';
 import { CollapseButton, NavLinkWithHover } from './styles';
+import useSocket from '@hooks/useSocket';
 
 function DMList() {
   const { workspace } = useParams<{ workspace?: string }>();
@@ -17,10 +16,28 @@ function DMList() {
   );
   const [collapse, setCollapse] = useState(false);
   const [countList, setCountList] = useState<{ [key: string]: number | undefined }>({});
-  const [isOnline, setIsOnline] = useState(true);
+  const [onlineList, setOnlineList] = useState<number[]>([]);
+  const [socket] = useSocket(workspace);
+
   const toggleCollapse = useCallback(() => {
     setCollapse((prev) => !prev);
   }, []);
+
+  // useEffect(() => {
+  //   console.log('DMList: workspace 바꼈다.', workspace);
+  //   setOnlineList([]);
+  //   setCountList({});
+  // }, [workspace]);
+
+  useEffect(() => {
+    socket?.on('onlineList', (data: number[]) => {
+      setOnlineList(data);
+    });
+    return () => {
+      socket?.off('onlineList');
+    };
+  }, [socket]);
+
   return (
     <>
       <h2>
@@ -36,6 +53,7 @@ function DMList() {
       <div>
         {!collapse &&
           memberData?.map((member) => {
+            const isOnline = onlineList.includes(member.id);
             const count = countList[member.id] || 0;
             return (
               <NavLinkWithHover
