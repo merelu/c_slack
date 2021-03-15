@@ -12,20 +12,25 @@ import { toast } from 'react-toastify';
 import { IDM } from '@typings/db';
 import makeSection from '@utils/makeSection';
 import Scrollbars from 'react-custom-scrollbars';
+import useSocket from '@hooks/useSocket';
 
 function DirectMessage() {
   const { workspace, id } = useParams<{ workspace: string; id: string }>();
+  const [chat, onChangeChat, setChat] = useInput('');
   const { data: myData } = useSWR('/api/users', fetcher);
   const { data: userData } = useSWR(`/api/workspaces/${workspace}/members/${id}`, fetcher);
-  const [chat, onChangeChat, setChat] = useInput('');
   const { data: chatData, mutate: mutateChat, revalidate, setSize } = useSWRInfinite<IDM[]>(
     (index) => `/api/workspaces/${workspace}/dms/${id}/chats?perPage=20&page=${index + 1}`,
     fetcher,
   );
+  const [socket] = useSocket(workspace);
   const isEmpty = chatData?.[0]?.length === 0;
   const isReachingEnd = isEmpty || (chatData && chatData[chatData.length - 1]?.length < 20) || false;
 
   const scrollbarRef = useRef<Scrollbars>(null);
+
+  const chatSections = makeSection(chatData ? [...chatData].flat().reverse() : []);
+
   const onSubmitForm = useCallback(
     (e) => {
       e.preventDefault();
@@ -65,6 +70,43 @@ function DirectMessage() {
     },
     [chat, chatData, id, mutateChat, myData, revalidate, setChat, userData, workspace],
   );
+
+  const onMessage = useCallback(
+    (data: IDM) => {
+      //id: 상대방 아이드
+      if (data.SenderId === Number(id) && myData.id !== Number(id)) {
+        mutateChat((chatData) => {
+          chatData?.[0].unshift(data);
+          return chatData;
+        }, false).then(() => {
+          if (scrollbarRef.current) {
+            if (
+              scrollbarRef.current.getScrollHeight() <
+              scrollbarRef.current.getClientHeight() + scrollbarRef.current.getScrollTop() + 150
+            ) {
+              console.log('scrollToBottom!', scrollbarRef.current?.getValues());
+              scrollbarRef.current.scrollToBottom();
+            } else {
+              toast.success('새 메시지가 도착했습니다.', {
+                onClick() {
+                  scrollbarRef.current?.scrollToBottom();
+                },
+                closeOnClick: true,
+              });
+            }
+          }
+        });
+      }
+    },
+    [id, mutateChat, myData.id],
+  );
+  //socket 연결
+  useEffect(() => {
+    socket?.on('dm', onMessage);
+    return () => {
+      socket?.off('dm', onMessage);
+    };
+  }, [onMessage, socket]);
   //로딩시 스크롤바 제일 아래로
   useEffect(() => {
     if (chatData?.length === 1) {
@@ -72,7 +114,6 @@ function DirectMessage() {
     }
   }, [chatData]);
   if (!myData || !userData) return null;
-  const chatSections = makeSection(chatData ? [...chatData].flat().reverse() : []);
 
   return (
     <Container>
