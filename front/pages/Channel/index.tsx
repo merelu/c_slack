@@ -1,33 +1,78 @@
+import fetcher from '@utils/fetcher';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import useSWR, { useSWRInfinite } from 'swr';
+import { Container, Header } from './styles';
+import { Redirect, useParams } from 'react-router';
 import ChatBox from '@components/ChatBox';
 import ChatList from '@components/ChatList';
 import useInput from '@hooks/useInput';
-import { IChat, IUser } from '@typings/db';
-import fetcher from '@utils/fetcher';
 import axios from 'axios';
-import React, { useCallback } from 'react';
-import { useParams } from 'react-router';
-import { toast } from 'react-toastify';
-import useSWR from 'swr';
-import { Container, Header } from './styles';
+import { toast, ToastContainer } from 'react-toastify';
+import makeSection from '@utils/makeSection';
+import Scrollbars from 'react-custom-scrollbars';
+import useSocket from '@hooks/useSocket';
+import { IChannel, IChat, IUser } from '@typings/db';
+import InviteChannelModal from '@components/InviteChannelModal';
 
+const PAGE_SIZE = 20;
 function Channel() {
   const { workspace, channel } = useParams<{ workspace: string; channel: string }>();
+  const [showInviteChannelModal, setShowInviteChannelModal] = useState(false);
   const [chat, onChangeChat, setChat] = useInput('');
-  const { data: userData } = useSWR<IUser>('/api/users', fetcher);
-  const { data: chatData, revalidate } = useSWR<IChat[]>(
-    userData ? `/api/workspaces/${workspace}/channels/${channel}/chats?perPage=10&page=1` : null,
+  const { data: myData } = useSWR<IUser>('/api/users', fetcher);
+  const { data: channelsData } = useSWR<IChannel[]>(`/api/workspaces/${workspace}/channels`, fetcher);
+  const { data: channelMembersData } = useSWR<IUser[]>(
+    myData ? `/api/workspaces/${workspace}/channels/${channel}/members` : null,
     fetcher,
   );
+  const { data: chatData, mutate: mutateChat, revalidate, setSize } = useSWRInfinite<IChat[]>(
+    (index) => `/api/workspaces/${workspace}/channels/${channel}/chats?perPage=${PAGE_SIZE}&page=${index + 1}`,
+    fetcher,
+  );
+  const [socket] = useSocket(workspace);
+  const channelData = channelsData?.find((v) => v.name === channel);
+  const validateChannel = channelMembersData?.find((v) => v.email === myData?.email);
+  const isEmpty = chatData?.[0]?.length === 0;
+  const isReachingEnd = isEmpty || (chatData && chatData[chatData.length - 1]?.length < PAGE_SIZE) || false;
 
+  const scrollbarRef = useRef<Scrollbars>(null);
+
+  const chatSections = makeSection(chatData ? [...chatData].flat().reverse() : []);
+
+  const onClickInviteChannel = useCallback(() => {
+    setShowInviteChannelModal(true);
+  }, []);
+  const onCloseModal = useCallback(() => {
+    setShowInviteChannelModal(false);
+  }, []);
   const onSubmitForm = useCallback(
     (e) => {
       e.preventDefault();
-      if (chat?.trim()) {
+      if (chat?.trim() && chatData && channelData && myData) {
+        const savedChat = chat;
+        mutateChat((prevChatData) => {
+          prevChatData?.[0].unshift({
+            id: (chatData[0][0]?.id || 0) + 1,
+            content: savedChat,
+            UserId: myData.id,
+            User: myData,
+            createdAt: new Date(),
+            ChannelId: channelData.id,
+            Channel: channelData,
+          });
+          return prevChatData;
+        }, false).then(() => {
+          setChat('');
+          if (scrollbarRef.current) {
+            console.log('scrollToBottom!', scrollbarRef.current?.getValues());
+            scrollbarRef.current.scrollToBottom();
+          }
+        });
         axios
           .post(
             `/api/workspaces/${workspace}/channels/${channel}/chats`,
             {
-              content: chat,
+              content: savedChat,
             },
             { withCredentials: true },
           )
@@ -41,14 +86,83 @@ function Channel() {
           });
       }
     },
-    [channel, chat, revalidate, setChat, workspace],
+    [channel, channelData, chat, chatData, mutateChat, myData, revalidate, setChat, workspace],
   );
 
+  const onMessage = useCallback(
+    (data: IChat) => {
+      if (data.Channel.name === channel && data.UserId !== myData?.id) {
+        mutateChat((chatData) => {
+          chatData?.[0].unshift(data);
+          return chatData;
+        }, false).then(() => {
+          if (scrollbarRef.current) {
+            if (
+              scrollbarRef.current.getScrollHeight() <
+              scrollbarRef.current.getClientHeight() + scrollbarRef.current.getScrollTop() + 150
+            ) {
+              console.log('scrollToBottom!', scrollbarRef.current?.getValues());
+              scrollbarRef.current.scrollToBottom();
+            } else {
+              toast.success('새 메시지가 도착했습니다.', {
+                onClick() {
+                  scrollbarRef.current?.scrollToBottom();
+                },
+                closeOnClick: true,
+              });
+            }
+          }
+        });
+      }
+    },
+    [channel, mutateChat, myData?.id],
+  );
+
+  useEffect(() => {
+    socket?.on('message', onMessage);
+    return () => {
+      socket?.off('message', onMessage);
+    };
+  }, [onMessage, socket]);
+
+  useEffect(() => {
+    if (chatData?.length === 1) {
+      scrollbarRef.current?.scrollToBottom();
+    }
+  }, [chatData]);
+  if (channelsData && !channelData) {
+    return <Redirect to={`/workspace/${workspace}/channel/일반`} />;
+  } else if (channelMembersData && !validateChannel) {
+    toast.error(`#${channel} 채널 접근 권한이 없습니다.`, { closeOnClick: true });
+    return <Redirect to={`/workspace/${workspace}/channel/일반`} />;
+  }
   return (
     <Container>
-      <Header>Channels</Header>
-      {/* <ChatList chatData={chatData} /> */}
+      <Header>
+        <span>#{channel}</span>
+        <div className="header-right">
+          <span>{channelMembersData?.length}</span>
+          <button
+            onClick={onClickInviteChannel}
+            className="c-button-unstyled p-ia__view_header__button"
+            aria-label="Add people to #react-native"
+            data-sk="tooltip_parent"
+            type="button"
+          >
+            <i className="c-icon p-ia__view_header__button_icon c-icon--add-user" aria-hidden="true" />
+          </button>
+        </div>
+      </Header>
+      <ChatList
+        chatSections={chatSections}
+        scrollbarRef={scrollbarRef}
+        setSize={setSize}
+        isEmpty={isEmpty}
+        isReachingEnd={isReachingEnd}
+      />
       <ChatBox chat={chat} onChangeChat={onChangeChat} onSubmitForm={onSubmitForm} />
+      <InviteChannelModal show={showInviteChannelModal} onCloseModal={onCloseModal} />
+      <ToastContainer position="bottom-center" />
     </Container>
   );
 }
