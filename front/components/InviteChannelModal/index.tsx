@@ -9,12 +9,12 @@ import { useParams } from 'react-router';
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
 
-interface IInviteChannelModlaProps {
+interface IInviteChannelModalProps {
   show: boolean;
   onCloseModal: () => void;
 }
 
-function InviteChannelModal({ show, onCloseModal }: IInviteChannelModlaProps) {
+function InviteChannelModal({ show, onCloseModal }: IInviteChannelModalProps) {
   const { workspace, channel } = useParams<{ workspace: string; channel: string }>();
   const { data: userData } = useSWR<IUser>('/api/users', fetcher);
   const { revalidate: revalidateMembers } = useSWR<IUser[]>(
@@ -28,7 +28,7 @@ function InviteChannelModal({ show, onCloseModal }: IInviteChannelModlaProps) {
       if (!newMember || !newMember.trim()) return;
       axios
         .post(
-          `/api/workspaces/${workspace}/channels/${channel}/member`,
+          `/api/workspaces/${workspace}/channels/${channel}/members`,
           {
             email: newMember,
           },
@@ -45,7 +45,7 @@ function InviteChannelModal({ show, onCloseModal }: IInviteChannelModlaProps) {
           toast.error(error.response?.data);
         });
     },
-    [newMember],
+    [channel, newMember, onCloseModal, revalidateMembers, setNewMember, workspace],
   );
 
   return (
