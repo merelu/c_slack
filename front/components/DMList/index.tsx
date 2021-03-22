@@ -3,9 +3,9 @@ import fetcher from '@utils/fetcher';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import useSWR from 'swr';
-import gravatar from 'gravatar';
-import { CollapseButton, NavLinkWithHover } from './styles';
+import { CollapseButton } from './styles';
 import useSocket from '@hooks/useSocket';
+import EachDM from '@components/EachDM';
 
 function DMList() {
   const { workspace } = useParams<{ workspace?: string }>();
@@ -15,7 +15,6 @@ function DMList() {
     fetcher,
   );
   const [collapse, setCollapse] = useState(false);
-  const [countList, setCountList] = useState<{ [key: string]: number | undefined }>({});
   const [onlineList, setOnlineList] = useState<number[]>([]);
   const [socket] = useSocket(workspace);
 
@@ -54,32 +53,7 @@ function DMList() {
         {!collapse &&
           memberData?.map((member) => {
             const isOnline = onlineList.includes(member.id);
-            const count = countList[member.id] || 0;
-            return (
-              <NavLinkWithHover
-                key={member.id}
-                activeStyle={{
-                  background: '#1164A3',
-                }}
-                to={`/workspace/${workspace}/dm/${member.id}`}
-              >
-                <i
-                  className={`c-icon p-channel_sidebar__presence_icon p-channel_sidebar__presence_icon--dim_enabled c-presence ${
-                    isOnline ? 'c-presence--active c-icon--presence-online' : 'c-icon--presence-offline'
-                  }`}
-                  aria-hidden="true"
-                  data-qa="presence_indicator"
-                  data-qa-presence-self="false"
-                  data-qa-presence-active="false"
-                  data-qa-presence-dnd="false"
-                />
-                <img src={gravatar.url(member.email, { s: '20px', d: 'retro' })} alt={member.nickname} />
-
-                <span className={count > 0 ? 'bold' : undefined}>{member.nickname}</span>
-                {member.id === userData?.id && <span>(나)</span>}
-                {count > 0 && <span className="count">{count}</span>}
-              </NavLinkWithHover>
-            );
+            return <EachDM key={member.id} member={member} isOnline={isOnline}></EachDM>;
           })}
       </div>
     </>

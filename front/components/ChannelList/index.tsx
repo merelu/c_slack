@@ -1,8 +1,9 @@
-import { CollapseButton, NavLinkWithHover } from '@components/DMList/styles';
+import { CollapseButton } from '@components/DMList/styles';
+import EachChannel from '@components/EachChannel';
 import { IChannel, IUser } from '@typings/db';
 import fetcher from '@utils/fetcher';
 import React, { useCallback, useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import useSWR from 'swr';
 
 function ChannelList() {
@@ -10,7 +11,6 @@ function ChannelList() {
   const { data: userData } = useSWR<IUser>('/api/users', fetcher);
   const { data: channelData } = useSWR<IChannel[]>(userData ? `/api/workspaces/${workspace}/channels` : null, fetcher);
   const [collapse, setCollapse] = useState(false);
-  const [countList, setCountList] = useState<{ [key: string]: number | undefined }>({});
   const toggleCollapse = useCallback(() => {
     setCollapse((prev) => !prev);
   }, []);
@@ -29,19 +29,7 @@ function ChannelList() {
       <div>
         {!collapse &&
           channelData?.map((channel) => {
-            const count = countList[`c-${channel.id}`];
-            return (
-              <NavLinkWithHover
-                key={channel.name}
-                activeStyle={{
-                  background: '#1164A3',
-                }}
-                to={`/workspace/${workspace}/channel/${channel.name}`}
-              >
-                <span className={count !== undefined && count >= 0 ? 'bold' : undefined}>#{channel.name}</span>
-                {count !== undefined && count > 0 && <span className="count">{count}</span>}
-              </NavLinkWithHover>
-            );
+            return <EachChannel key={channel.id} channel={channel} />;
           })}
       </div>
     </>
