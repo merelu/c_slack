@@ -18,6 +18,7 @@ import { DragOver } from '@pages/DirectMessage/styles';
 const PAGE_SIZE = 20;
 function Channel() {
   const { workspace, channel } = useParams<{ workspace: string; channel: string }>();
+
   const [showInviteChannelModal, setShowInviteChannelModal] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [chat, onChangeChat, setChat] = useInput('');
@@ -27,9 +28,26 @@ function Channel() {
     myData ? `/api/workspaces/${workspace}/channels/${channel}/members` : null,
     fetcher,
   );
+  const date = localStorage.getItem(`${workspace}-${channel}`) || 0;
+  const { mutate: countMutate } = useSWR<number>(
+    myData ? `/api/workspaces/${workspace}/channels/${channel}/unreads?after=${date}` : null,
+    fetcher,
+  );
+
   const { data: chatData, mutate: mutateChat, revalidate, setSize } = useSWRInfinite<IChat[]>(
     (index) => `/api/workspaces/${workspace}/channels/${channel}/chats?perPage=${PAGE_SIZE}&page=${index + 1}`,
     fetcher,
+    {
+      onSuccess(data) {
+        if (data?.length === 1) {
+          setTimeout(() => {
+            scrollbarRef.current?.scrollToBottom();
+          }, 100);
+          countMutate(0);
+          localStorage.setItem(`${workspace}-${channel}`, new Date().getTime().toString());
+        }
+      },
+    },
   );
   const [socket] = useSocket(workspace);
   const channelData = channelsData?.find((v) => v.name === channel);
@@ -64,11 +82,9 @@ function Channel() {
           });
           return prevChatData;
         }, false).then(() => {
+          localStorage.setItem(`${workspace}-${channel}`, new Date().getTime().toString());
           setChat('');
-          if (scrollbarRef.current) {
-            console.log('scrollToBottom!', scrollbarRef.current?.getValues());
-            scrollbarRef.current.scrollToBottom();
-          }
+          scrollbarRef.current?.scrollToBottom();
         });
         axios
           .post(
@@ -144,10 +160,10 @@ function Channel() {
       }
       axios.post(`/api/workspaces/${workspace}/channels/${channel}/images`, formData).then(() => {
         setDragOver(false);
-        revalidate();
+        localStorage.setItem(`${workspace}-${channel}`, new Date().getTime().toString());
       });
     },
-    [channel, revalidate, workspace],
+    [channel, workspace],
   );
 
   const onDragOver = useCallback((e) => {
@@ -164,12 +180,9 @@ function Channel() {
   }, [onMessage, socket]);
 
   useEffect(() => {
-    if (chatData?.length === 1) {
-      setTimeout(() => {
-        scrollbarRef.current?.scrollToBottom();
-      }, 100);
-    }
-  }, [chatData]);
+    localStorage.setItem(`${workspace}-${channel}`, new Date().getTime().toString());
+  }, [channel, workspace]);
+
   if (channelsData && !channelData) {
     return <Redirect to={`/workspace/${workspace}/channel/일반`} />;
   } else if (channelMembersData && !validateChannel) {

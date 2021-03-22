@@ -1,6 +1,6 @@
 import Chat from '@components/Chat';
 import { IChat, IDM } from '@typings/db';
-import React, { useCallback, useRef, forwardRef, RefObject } from 'react';
+import React, { useCallback, RefObject } from 'react';
 import { ChatZone, Section, StickyHeader } from './styles';
 import { Scrollbars } from 'react-custom-scrollbars';
 interface IChatList {
@@ -11,17 +11,19 @@ interface IChatList {
   isReachingEnd: boolean;
 }
 function ChatList({ chatSections, setSize, scrollbarRef, isEmpty, isReachingEnd }: IChatList) {
-  const onScroll = useCallback((values) => {
-    if (values.scrollTop === 0 && !isReachingEnd) {
-      console.log('가장 위');
-      setSize((prevSize) => prevSize + 1).then(() => {
-        //스크롤 위치 유지
-        if (scrollbarRef?.current) {
-          scrollbarRef.current?.scrollTop(scrollbarRef.current?.getScrollHeight() - values.scrollHeight);
-        }
-      });
-    }
-  }, []);
+  const onScroll = useCallback(
+    (values) => {
+      if (values.scrollTop === 0 && !isReachingEnd && !isEmpty) {
+        setSize((prevSize) => prevSize + 1).then(() => {
+          //스크롤 위치 유지
+          if (scrollbarRef?.current) {
+            scrollbarRef.current?.scrollTop(scrollbarRef.current?.getScrollHeight() - values.scrollHeight);
+          }
+        });
+      }
+    },
+    [isEmpty, isReachingEnd, scrollbarRef, setSize],
+  );
   return (
     <ChatZone>
       <Scrollbars autoHide ref={scrollbarRef} onScrollFrame={onScroll}>
