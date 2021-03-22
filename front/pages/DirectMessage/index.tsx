@@ -1,7 +1,7 @@
 import fetcher from '@utils/fetcher';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR, { useSWRInfinite } from 'swr';
-import { Container, Header } from './styles';
+import { Container, DragOver, Header } from './styles';
 import gravatar from 'gravatar';
 import { useParams } from 'react-router';
 import ChatBox from '@components/ChatBox';
@@ -17,6 +17,7 @@ import useSocket from '@hooks/useSocket';
 function DirectMessage() {
   const { workspace, id } = useParams<{ workspace: string; id: string }>();
   const [chat, onChangeChat, setChat] = useInput('');
+  const [dragOver, setDragOver] = useState(false);
   const { data: myData } = useSWR('/api/users', fetcher);
   const { data: userData } = useSWR(`/api/workspaces/${workspace}/members/${id}`, fetcher);
   const { data: chatData, mutate: mutateChat, revalidate, setSize } = useSWRInfinite<IDM[]>(
@@ -85,7 +86,9 @@ function DirectMessage() {
               scrollbarRef.current.getClientHeight() + scrollbarRef.current.getScrollTop() + 150
             ) {
               console.log('scrollToBottom!', scrollbarRef.current?.getValues());
-              scrollbarRef.current.scrollToBottom();
+              setTimeout(() => {
+                scrollbarRef.current?.scrollToBottom();
+              }, 50);
             } else {
               toast.success('새 메시지가 도착했습니다.', {
                 onClick() {
@@ -100,6 +103,38 @@ function DirectMessage() {
     },
     [id, mutateChat, myData.id],
   );
+  const onDrop = useCallback(
+    (e) => {
+      e.preventDefault(e);
+      console.log(e);
+      const formData = new FormData();
+      if (e.dataTransfer.items) {
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          if (e.dataTransfer.items[i].kind === 'file') {
+            const file = e.dataTransfer.items[i].getAsFile();
+            console.log('... file[' + i + '].name = ' + file.name);
+            formData.append('image', file);
+          }
+        }
+      } else {
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          console.log('... file[' + i + '].name = ' + e.dataTransfer.files[i]);
+          formData.append('image', e.dataTransfer.files[i]);
+        }
+      }
+      axios.post(`/api/workspaces/${workspace}/dms/${id}/images`, formData).then(() => {
+        setDragOver(false);
+        revalidate();
+      });
+    },
+    [id, revalidate, workspace],
+  );
+
+  const onDragOver = useCallback((e) => {
+    e.preventDefault();
+    console.log(e);
+    setDragOver(true);
+  }, []);
   //socket 연결
   useEffect(() => {
     socket?.on('dm', onMessage);
@@ -107,16 +142,20 @@ function DirectMessage() {
       socket?.off('dm', onMessage);
     };
   }, [onMessage, socket]);
+
   //로딩시 스크롤바 제일 아래로
   useEffect(() => {
     if (chatData?.length === 1) {
-      scrollbarRef.current?.scrollToBottom();
+      setTimeout(() => {
+        scrollbarRef.current?.scrollToBottom();
+      }, 100);
     }
   }, [chatData]);
+
   if (!myData || !userData) return null;
 
   return (
-    <Container>
+    <Container onDrop={onDrop} onDragOver={onDragOver}>
       <Header>
         <img src={gravatar.url(userData.email, { s: '24px', d: 'retro' })} alt={userData.nickname} />
         <span>{userData.nickname}</span>
@@ -129,6 +168,7 @@ function DirectMessage() {
         isReachingEnd={isReachingEnd}
       />
       <ChatBox chat={chat} onChangeChat={onChangeChat} onSubmitForm={onSubmitForm} />
+      {dragOver && <DragOver>업로드!</DragOver>}
     </Container>
   );
 }

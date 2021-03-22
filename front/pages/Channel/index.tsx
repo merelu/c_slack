@@ -13,11 +13,13 @@ import Scrollbars from 'react-custom-scrollbars';
 import useSocket from '@hooks/useSocket';
 import { IChannel, IChat, IUser } from '@typings/db';
 import InviteChannelModal from '@components/InviteChannelModal';
+import { DragOver } from '@pages/DirectMessage/styles';
 
 const PAGE_SIZE = 20;
 function Channel() {
   const { workspace, channel } = useParams<{ workspace: string; channel: string }>();
   const [showInviteChannelModal, setShowInviteChannelModal] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [chat, onChangeChat, setChat] = useInput('');
   const { data: myData } = useSWR<IUser>('/api/users', fetcher);
   const { data: channelsData } = useSWR<IChannel[]>(`/api/workspaces/${workspace}/channels`, fetcher);
@@ -91,6 +93,7 @@ function Channel() {
 
   const onMessage = useCallback(
     (data: IChat) => {
+      // message submit에서 보내는게 아니고 onDrop에서 보내는 것이므로 uploads로 시작되는 데이터는
       if (data.Channel.name === channel && data.UserId !== myData?.id) {
         mutateChat((chatData) => {
           chatData?.[0].unshift(data);
@@ -102,7 +105,9 @@ function Channel() {
               scrollbarRef.current.getClientHeight() + scrollbarRef.current.getScrollTop() + 150
             ) {
               console.log('scrollToBottom!', scrollbarRef.current?.getValues());
-              scrollbarRef.current.scrollToBottom();
+              setTimeout(() => {
+                scrollbarRef.current?.scrollToBottom();
+              }, 50);
             } else {
               toast.success('새 메시지가 도착했습니다.', {
                 onClick() {
@@ -118,6 +123,39 @@ function Channel() {
     [channel, mutateChat, myData?.id],
   );
 
+  const onDrop = useCallback(
+    (e) => {
+      e.preventDefault(e);
+      console.log(e);
+      const formData = new FormData();
+      if (e.dataTransfer.items) {
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          if (e.dataTransfer.items[i].kind === 'file') {
+            const file = e.dataTransfer.items[i].getAsFile();
+            console.log('... file[' + i + '].name = ' + file.name);
+            formData.append('image', file);
+          }
+        }
+      } else {
+        for (let i = 0; i < e.dataTransfer.items.length; i++) {
+          console.log('... file[' + i + '].name = ' + e.dataTransfer.files[i]);
+          formData.append('image', e.dataTransfer.files[i]);
+        }
+      }
+      axios.post(`/api/workspaces/${workspace}/channels/${channel}/images`, formData).then(() => {
+        setDragOver(false);
+        revalidate();
+      });
+    },
+    [channel, revalidate, workspace],
+  );
+
+  const onDragOver = useCallback((e) => {
+    e.preventDefault();
+    console.log(e);
+    setDragOver(true);
+  }, []);
+
   useEffect(() => {
     socket?.on('message', onMessage);
     return () => {
@@ -127,7 +165,9 @@ function Channel() {
 
   useEffect(() => {
     if (chatData?.length === 1) {
-      scrollbarRef.current?.scrollToBottom();
+      setTimeout(() => {
+        scrollbarRef.current?.scrollToBottom();
+      }, 100);
     }
   }, [chatData]);
   if (channelsData && !channelData) {
@@ -137,7 +177,7 @@ function Channel() {
     return <Redirect to={`/workspace/${workspace}/channel/일반`} />;
   }
   return (
-    <Container>
+    <Container onDrop={onDrop} onDragOver={onDragOver}>
       <Header>
         <span>#{channel}</span>
         <div className="header-right">
@@ -163,6 +203,7 @@ function Channel() {
       <ChatBox chat={chat} onChangeChat={onChangeChat} onSubmitForm={onSubmitForm} />
       <InviteChannelModal show={showInviteChannelModal} onCloseModal={onCloseModal} />
       <ToastContainer position="bottom-center" />
+      {dragOver && <DragOver>업로드!</DragOver>}
     </Container>
   );
 }
