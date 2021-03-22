@@ -20,9 +20,25 @@ function DirectMessage() {
   const [dragOver, setDragOver] = useState(false);
   const { data: myData } = useSWR('/api/users', fetcher);
   const { data: userData } = useSWR(`/api/workspaces/${workspace}/members/${id}`, fetcher);
+  const date = localStorage.getItem(`${workspace}-${id}`) || 0;
+  const { mutate: countMutate } = useSWR<number>(
+    userData ? `/api/workspaces/${workspace}/dms/${id}/unreads?after=${date}` : null,
+    fetcher,
+  );
   const { data: chatData, mutate: mutateChat, revalidate, setSize } = useSWRInfinite<IDM[]>(
     (index) => `/api/workspaces/${workspace}/dms/${id}/chats?perPage=20&page=${index + 1}`,
     fetcher,
+    {
+      onSuccess(data) {
+        if (data?.length === 1) {
+          setTimeout(() => {
+            scrollbarRef.current?.scrollToBottom();
+          }, 100);
+          countMutate(0);
+          localStorage.setItem(`${workspace}-${id}`, new Date().getTime().toString());
+        }
+      },
+    },
   );
   const [socket] = useSocket(workspace);
   const isEmpty = chatData?.[0]?.length === 0;
@@ -49,6 +65,7 @@ function DirectMessage() {
           });
           return prevChatData;
         }, false).then(() => {
+          localStorage.setItem(`${workspace}-${id}`, new Date().getTime().toString());
           setChat('');
           scrollbarRef.current?.scrollToBottom();
         });
@@ -124,10 +141,10 @@ function DirectMessage() {
       }
       axios.post(`/api/workspaces/${workspace}/dms/${id}/images`, formData).then(() => {
         setDragOver(false);
-        revalidate();
+        localStorage.setItem(`${workspace}-${id}`, new Date().getTime().toString());
       });
     },
-    [id, revalidate, workspace],
+    [id, workspace],
   );
 
   const onDragOver = useCallback((e) => {
@@ -143,14 +160,9 @@ function DirectMessage() {
     };
   }, [onMessage, socket]);
 
-  //로딩시 스크롤바 제일 아래로
   useEffect(() => {
-    if (chatData?.length === 1) {
-      setTimeout(() => {
-        scrollbarRef.current?.scrollToBottom();
-      }, 100);
-    }
-  }, [chatData]);
+    localStorage.setItem(`${workspace}-${id}`, new Date().getTime().toString());
+  }, [id, workspace]);
 
   if (!myData || !userData) return null;
 
