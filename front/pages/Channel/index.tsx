@@ -34,7 +34,7 @@ function Channel() {
     fetcher,
   );
 
-  const { data: chatData, mutate: mutateChat, revalidate, setSize } = useSWRInfinite<IChat[]>(
+  const { data: chatData, mutate: mutateChat, revalidate: revalidateChat, setSize } = useSWRInfinite<IChat[]>(
     (index) => `/api/workspaces/${workspace}/channels/${channel}/chats?perPage=${PAGE_SIZE}&page=${index + 1}`,
     fetcher,
     {
@@ -95,7 +95,7 @@ function Channel() {
             { withCredentials: true },
           )
           .then(() => {
-            revalidate();
+            revalidateChat();
             setChat('');
           })
           .catch((error) => {
@@ -104,7 +104,7 @@ function Channel() {
           });
       }
     },
-    [channel, channelData, chat, chatData, mutateChat, myData, revalidate, setChat, workspace],
+    [channel, channelData, chat, chatData, mutateChat, myData, revalidateChat, setChat, workspace],
   );
 
   const onMessage = useCallback(
@@ -161,9 +161,10 @@ function Channel() {
       axios.post(`/api/workspaces/${workspace}/channels/${channel}/images`, formData).then(() => {
         setDragOver(false);
         localStorage.setItem(`${workspace}-${channel}`, new Date().getTime().toString());
+        revalidateChat();
       });
     },
-    [channel, workspace],
+    [channel, revalidateChat, workspace],
   );
 
   const onDragOver = useCallback((e) => {

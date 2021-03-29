@@ -9,7 +9,7 @@ import ChatList from '@components/ChatList';
 import useInput from '@hooks/useInput';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { IDM } from '@typings/db';
+import { IDM, IUser } from '@typings/db';
 import makeSection from '@utils/makeSection';
 import Scrollbars from 'react-custom-scrollbars';
 import useSocket from '@hooks/useSocket';
@@ -19,13 +19,13 @@ function DirectMessage() {
   const [chat, onChangeChat, setChat] = useInput('');
   const [dragOver, setDragOver] = useState(false);
   const { data: myData } = useSWR('/api/users', fetcher);
-  const { data: userData } = useSWR(`/api/workspaces/${workspace}/members/${id}`, fetcher);
+  const { data: userData } = useSWR<IUser>(myData ? `/api/workspaces/${workspace}/users/${id}` : null, fetcher);
   const date = localStorage.getItem(`${workspace}-${id}`) || 0;
   const { mutate: countMutate } = useSWR<number>(
     userData ? `/api/workspaces/${workspace}/dms/${id}/unreads?after=${date}` : null,
     fetcher,
   );
-  const { data: chatData, mutate: mutateChat, revalidate, setSize } = useSWRInfinite<IDM[]>(
+  const { data: chatData, mutate: mutateChat, revalidate: revalidateChat, setSize } = useSWRInfinite<IDM[]>(
     (index) => `/api/workspaces/${workspace}/dms/${id}/chats?perPage=20&page=${index + 1}`,
     fetcher,
     {
@@ -51,7 +51,7 @@ function DirectMessage() {
   const onSubmitForm = useCallback(
     (e) => {
       e.preventDefault();
-      if (chat?.trim() && chatData) {
+      if (chat?.trim() && chatData && userData) {
         const savedChat = chat;
         mutateChat((prevChatData) => {
           prevChatData?.[0].unshift({
@@ -78,7 +78,7 @@ function DirectMessage() {
             { withCredentials: true },
           )
           .then(() => {
-            revalidate();
+            revalidateChat();
           })
           .catch((error) => {
             console.dir(error);
@@ -86,7 +86,7 @@ function DirectMessage() {
           });
       }
     },
-    [chat, chatData, id, mutateChat, myData, revalidate, setChat, userData, workspace],
+    [chat, chatData, id, mutateChat, myData, revalidateChat, setChat, userData, workspace],
   );
 
   const onMessage = useCallback(
@@ -142,9 +142,10 @@ function DirectMessage() {
       axios.post(`/api/workspaces/${workspace}/dms/${id}/images`, formData).then(() => {
         setDragOver(false);
         localStorage.setItem(`${workspace}-${id}`, new Date().getTime().toString());
+        revalidateChat();
       });
     },
-    [id, workspace],
+    [id, revalidateChat, workspace],
   );
 
   const onDragOver = useCallback((e) => {
@@ -164,7 +165,11 @@ function DirectMessage() {
     localStorage.setItem(`${workspace}-${id}`, new Date().getTime().toString());
   }, [id, workspace]);
 
-  if (!myData || !userData) return null;
+  if (!myData || !userData) {
+    return null;
+  } else {
+    console.log(userData);
+  }
 
   return (
     <Container onDrop={onDrop} onDragOver={onDragOver}>
